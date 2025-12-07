@@ -49,7 +49,7 @@ npy_fasttake_impl(
     NPY_ARRAYMETHOD_FLAGS flags;
     NPY_cast_info_init(&cast_info);
 
-    if (!needs_refcounting) {
+    if (!needs_refcounting && (src_dtype == dst_dtype)) {
         /* if "refcounting" is not needed memcpy is safe for a simple copy  */
         NPY_BEGIN_THREADS;
     }
@@ -73,8 +73,8 @@ npy_fasttake_impl(
                                                _save) < 0) {
                         goto fail;
                     }
-                    char *tmp_src = src + tmp * chunk;
-                    if (needs_refcounting) {
+                    char *tmp_src = src + tmp * src_dtype->elsize;
+                    if (needs_refcounting || !(src_dtype == dst_dtype))  {
                         char *data[2] = {tmp_src, dest};
                         npy_intp strides[2] = {itemsize, itemsize};
                         if (cast_info.func(
@@ -232,7 +232,7 @@ NPY_NO_EXPORT PyObject *
 PyArray_TakeFrom(PyArrayObject *self0, PyObject *indices0, int axis,
                  PyArrayObject *out, NPY_CLIPMODE clipmode)
 {
-    PyArray_Descr *dtype;
+    PyArray_Descr *dtype, *out_dtype;
     PyArrayObject *obj = NULL, *self, *indices;
     npy_intp nd, i, n, m, max_item, chunk, itemsize, nelem;
     npy_intp shape[NPY_MAXDIMS];
@@ -311,7 +311,11 @@ PyArray_TakeFrom(PyArrayObject *self0, PyObject *indices0, int axis,
         }
         dtype = PyArray_DESCR(self);
         Py_INCREF(dtype);
-        obj = (PyArrayObject *)PyArray_FromArray(out, dtype, flags);
+        out_dtype = PyArray_DESCR(out);
+        if (PyArray_CanCastTypeTo(dtype, out_dtype, NPY_SAFE_CASTING) != 0) {
+            obj = (PyArrayObject *)out;
+            Py_INCREF(obj);
+        }
         if (obj == NULL) {
             goto fail;
         }
