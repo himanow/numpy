@@ -106,8 +106,8 @@ npy_fasttake_impl(
                             tmp -= max_item;
                         }
                     }
-                    char *tmp_src = src + tmp * chunk;
-                    if (needs_refcounting) {
+                    char *tmp_src = src + tmp * src_dtype->elsize;
+                    if (needs_refcounting || !(src_dtype == dst_dtype))  {
                         char *data[2] = {tmp_src, dest};
                         npy_intp strides[2] = {itemsize, itemsize};
                         if (cast_info.func(
@@ -135,8 +135,8 @@ npy_fasttake_impl(
                     else if (tmp >= max_item) {
                         tmp = max_item - 1;
                     }
-                    char *tmp_src = src + tmp * chunk;
-                    if (needs_refcounting) {
+                    char *tmp_src = src + tmp * src_dtype->elsize;
+                    if (needs_refcounting || !(src_dtype == dst_dtype))  {
                         char *data[2] = {tmp_src, dest};
                         npy_intp strides[2] = {itemsize, itemsize};
                         if (cast_info.func(
