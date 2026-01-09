@@ -312,11 +312,21 @@ PyArray_TakeFrom(PyArrayObject *self0, PyObject *indices0, int axis,
         dtype = PyArray_DESCR(self);
         Py_INCREF(dtype);
         out_dtype = PyArray_DESCR(out);
-        if (dtype == out_dtype){
+        if (dtype == out_dtype) {
             obj = (PyArrayObject *)out;
             Py_INCREF(obj);
         }
-        else if (dtype != out_dtype && PyArray_CanCastTypeTo(out_dtype, dtype, NPY_SAME_KIND_CASTING) != 0) {
+        else {
+            if (PyArray_CanCastTypeTo(dtype, out_dtype, NPY_SAME_KIND_CASTING) == 0) {
+                if (DEPRECATE(
+                            "Implicit casting of output to a different kind is "
+                            "deprecated. "
+                            "In a future version, this will result in an error. Please "
+                            "ensure the output has the same-kind type as the input.") <
+                    0) {
+                    goto fail;
+                }
+            }
             flags |= NPY_ARRAY_FORCECAST;
             obj = (PyArrayObject *)PyArray_FromArray(out, dtype, flags);
             Py_INCREF(obj);
